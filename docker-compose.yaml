@@ -25,9 +25,9 @@ services:
     networks:
       - internal
     volumes:
-      - /Users/rumley/Downloads/dblpv13.json:/dblpv13.json
+      - $PWD/dblpExample.json:/file.json
     environment:
-      - JSON_FILE=/dblpv13.json
+      - JSON_FILE=/file.json
       - MAX_NODES=10000
       - NEO4J_IP=172.24.0.10 # must be the same as above
     deploy:

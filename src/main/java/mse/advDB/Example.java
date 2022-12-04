@@ -19,15 +19,23 @@ public class Example {
         System.out.println("IP addresss of neo4j server is " + neo4jIP);
 
         Driver driver = GraphDatabase.driver("bolt://" + neo4jIP + ":7687", AuthTokens.basic("neo4j", "test"));
+	boolean connected = false;
+	do {
+	   try {
+	       System.out.println("Sleeping a bit waiting for the db");	   
+	       Thread.yield();   
+               Thread.sleep(5000); // let some time for the neo4j container to be up and running
 
-        Thread.sleep(10000); // let some time for the neo4j container to be up and running
-
-        driver.verifyConnectivity();
-
+                driver.verifyConnectivity();
+	        connected = true;
+            }
+	    catch(Exception e) {
+  	    }
+	} while(!connected);
         FileReader fr = new FileReader(jsonPath);
         BufferedReader br = new BufferedReader(fr);
         System.out.println("Reading first lines of the json file :");
-        for (int i = 0; i < 400 ; i++) {
+        for (int i = 0; i < 100 ; i++) {
             System.out.println(br.readLine());
         }
         driver.close();
