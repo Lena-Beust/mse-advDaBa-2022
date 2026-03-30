@@ -3,10 +3,13 @@ package mse.advDB;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+
+import static org.neo4j.driver.Values.parameters;
 
 public class Example {
 
@@ -35,8 +38,19 @@ public class Example {
         FileReader fr = new FileReader(jsonPath);
         BufferedReader br = new BufferedReader(fr);
         System.out.println("Reading first lines of the json file :");
-        for (int i = 0; i < 100 ; i++) {
+        for (int i = 0; i < 5 ; i++) {
             System.out.println(br.readLine());
+        }
+        // Create one node in the graph as an example
+        try (Session session = driver.session()) {
+            session.writeTransaction(tx -> {
+                tx.run(
+                        "CREATE (p:Person {name: $name, age: $age})",
+                        parameters("name", "Alice", "age", 30)
+                );
+                return null;
+            });
+
         }
         driver.close();
     }

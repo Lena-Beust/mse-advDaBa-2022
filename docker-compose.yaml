@@ -25,9 +25,9 @@ services:
     networks:
       - internal
     volumes:
-      - $PWD/dblpExample.json:/file.json
+      - $PWD/dblpExample.jsonl:/file.jsonl
     environment:
-      - JSON_FILE=/file.json
+      - JSON_FILE=/file.jsonl
       - MAX_NODES=10000
       - NEO4J_IP=172.24.0.10 # must be the same as above
     deploy:
