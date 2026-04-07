@@ -25,7 +25,10 @@ services:
     networks:
       - internal
     volumes:
-      - $PWD/dblpExample.jsonl:/file.jsonl
+      - $PWD/DBLP-Citation-network-V18.jsonl:/file.jsonl 
+      # pour le test sur TOUT : - $PWD/DBLP-Citation-network-V18.jsonl:/file.jsonl  
+      # pour le test sur extrait : - $PWD/test.jsonl:/file.jsonl 
+      # pour le test de base :- $PWD/dblpExample.json:/file.jsonl
     environment:
       - JSON_FILE=/file.jsonl
       - MAX_NODES=10000
