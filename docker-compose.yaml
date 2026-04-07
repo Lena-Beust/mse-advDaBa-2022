@@ -25,7 +25,7 @@ services:
     networks:
       - internal
     volumes:
-      - $PWD/DBLP-Citation-network-V18.jsonl:/file.jsonl 
+      - $PWD/test.jsonl:/file.jsonl
       # pour le test sur TOUT : - $PWD/DBLP-Citation-network-V18.jsonl:/file.jsonl  
       # pour le test sur extrait : - $PWD/test.jsonl:/file.jsonl 
       # pour le test de base :- $PWD/dblpExample.json:/file.jsonl
