@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc   # Nom du PVC, référencé dans le StatefulSet
+  namespace: beu-cro-adv-daba-26
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi # 📝 Taille du disque selon vos besoins

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beu-cro-adv-daba-26
+  namespace: beu-cro-adv-daba-26
+  labels:
+    app: beu-cro-adv-daba-26
+spec:
+  replicas: 1 # 📝 Nombre de copies de l'application
+  selector:
+    matchLabels:
+      app: beu-cro-adv-daba-26
+  template:
+    metadata:
+      labels:
+        app: beu-cro-adv-daba-26
+    spec:
+      # Référence au secret créé à l'étape 1 pour télécharger l'image privée
+      imagePullSecrets:
+        - name: regcred # 📝 Nom du secret de registry créé plus haut
+      containers:
+        - name: beu-cro-adv-daba-26
+          # 📝 L'URL de votre image Docker
+          image: registry.forge.hefr.ch/beu-cro/adv-daba-26:latest
+          imagePullPolicy: Always # Toujours vérifier les mises à jour de l'image (utile en dev, peut changer en prod)
+          ports:
+            - name: http
+              containerPort: 8080 # 📝 Port sur lequel votre code écoute (ex: 8080 pour Dart/Java/Node)
+          # Injection des variables définies dans la ConfigMap
+          envFrom:
+            - configMapRef:
+                name: beu-cro-adv-daba-26-config
+          # ⚠️ TRÈS IMPORTANT : Limites de ressources
+          resources:
+            requests:
+              memory: "64Mi" # Minimum garanti
+              cpu: "50m"
+            limits:
+              memory: "512Mi" # Plafond (l'app est tuée si elle dépasse)
+              cpu: "500m"
