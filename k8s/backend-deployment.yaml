@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beu-cro-adv-daba-26 # Nom du déploiement
+  namespace: beu-cro-adv-daba-26 # 📝 Votre namespace
+spec:
+  replicas: 1 # 📝 Ajustez selon la charge attendue
+  selector:
+    matchLabels:
+      app: beu-cro-adv-daba-26 # Nom du label
+  template:
+    metadata:
+      labels:
+        app: beu-cro-adv-daba-26
+    spec:
+      imagePullSecrets:
+        - name: regcred # Secret pour registry privé (si besoin)
+      containers:
+        - name: beu-cro-adv-daba-26
+          image: registry.forge.hefr.ch/beu-cro/adv-daba-26:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            # 1. Charge toute la config non-sensible
+            - configMapRef:
+                name: beu-cro-adv-daba-26-config
+          env:
+            # 2. Charge les secrets manuellement pour les mapper aux bons noms
+            - name: SERVERPOD_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: beu-cro-adv-daba-26-secrets
+                  key: postgres-user
+            - name: SERVERPOD_PASSWORD_database
+              valueFrom:
+                secretKeyRef:
+                  name: beu-cro-adv-daba-26-secrets
+                  key: postgres-password
+            - name: SERVERPOD_DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: beu-cro-adv-daba-26-secrets
+                  key: postgres-db
+            - name: PGDATA
+              valueFrom:
+                configMapKeyRef:
+                  name: beu-cro-adv-daba-26-config
+                  key: PGDATA
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: beu-cro-adv-daba-26-config
+                  key: TZ
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
