@@ -17,11 +17,11 @@ spec:
     spec:
       # Référence au secret créé à l'étape 1 pour télécharger l'image privée
       imagePullSecrets:
-        - name: regcred # 📝 Nom du secret de registry créé plus haut
+        - name: gitlab-registry-secret # regcred # 📝 Nom du secret de registry créé plus haut
       containers:
         - name: beu-cro-adv-daba-26
           # 📝 L'URL de votre image Docker
-          image: registry.forge.hefr.ch/beu-cro/adv-daba-26:latest
+          image: registry.forge.hefr.ch/lena.beust/adv-daba-26:latest
           imagePullPolicy: Always # Toujours vérifier les mises à jour de l'image (utile en dev, peut changer en prod)
           ports:
             - name: http
@@ -31,6 +31,22 @@ spec:
             - configMapRef:
                 name: beu-cro-adv-daba-26-config
           # ⚠️ TRÈS IMPORTANT : Limites de ressources
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: beu-cro-adv-daba-26-secrets # 👈 Ton secret Opaque existant
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: beu-cro-adv-daba-26-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: beu-cro-adv-daba-26-secrets
+                  key: postgres-db
           resources:
             requests:
               memory: "64Mi" # Minimum garanti
