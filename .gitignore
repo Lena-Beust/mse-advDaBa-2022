@@ -1,1 +1,4 @@
 neo4j_mount/
+*.jsonl
+*.json
+secrets.yaml
