@@ -30,7 +30,7 @@ public class ImportDB {
         String neo4jIP = System.getenv("NEO4J_IP");
         System.out.println("IP address of neo4j server is " + neo4jIP);
 
-        Driver driver = GraphDatabase.driver("bolt://" + neo4jIP + ":7687", AuthTokens.basic("neo4j", "test"));
+        Driver driver = GraphDatabase.driver("bolt://" + neo4jIP + ":7687", AuthTokens.basic("neo4j", "test_neo4j"));
 
         // Attendre que Neo4j soit prêt
         boolean connected = false;

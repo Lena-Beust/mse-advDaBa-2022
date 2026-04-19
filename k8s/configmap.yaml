@@ -7,4 +7,4 @@ data:
   TZ: "Europe/Zurich"
   NEO4J_IP: "neo4j"
   MAX_NODES: "1000" 
-  JSON_FILE: "/data/articles.json"
+  JSON_FILE: "/data/dblpExample.json"

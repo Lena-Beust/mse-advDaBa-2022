@@ -35,7 +35,7 @@ spec:
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: beu-cro-adv-daba-26-secrets # 👈 Ton secret Opaque existant
+                  name: beu-cro-adv-daba-26-secrets 
                   key: postgres-user
             - name: POSTGRES_PASSWORD
               valueFrom:
