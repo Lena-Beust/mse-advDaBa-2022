@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamer
+  namespace: beu-cro-adv-daba-26
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streamer
+  template:
+    metadata:
+      labels:
+        app: streamer
+    spec:
+      containers:
+      - name: streamer
+        image: registry.forge.hefr.ch/lena.beust/adv-daba-26:latest
+        env:
+          - name: NEO4J_URI
+            value: bolt://neo4j-service:7687
+          - name: NEO4J_USER
+            value: neo4j
+          - name: NEO4J_PASSWORD
+            value: password

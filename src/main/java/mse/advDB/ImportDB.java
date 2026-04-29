@@ -17,6 +17,9 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import jakarta.json.JsonString;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ImportDB {
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -58,86 +61,71 @@ public class ImportDB {
         try (BufferedReader br = new BufferedReader(new FileReader(jsonPath))) {
             String line;
             int count = 0;
+            final int BATCH_SIZE = 1000;
+            List<JsonObject> batch = new ArrayList<>();
 
             while ((line = br.readLine()) != null && count < nbArticles) {
-                if (line.trim().isEmpty()) {
+
+                if (line.trim().isEmpty())
                     continue;
-                }
 
                 JsonObject article;
                 try (JsonReader reader = Json.createReader(new StringReader(line))) {
                     article = reader.readObject();
                 }
 
-                final String articleId = article.getString("id", "");
-                final String title = article.getString("title", "");
+                batch.add(article);
 
-                if (articleId.isEmpty()) {
-                    continue;
-                }
-
-                try (Session session = driver.session()) {
-
-                    session.writeTransaction(tx -> {
-                        tx.run(
-                                "MERGE (a:ARTICLE {_id: $articleId}) "
-                                + "SET a.title = $title",
-                                parameters("articleId", articleId, "title", title)
-                        );
-                        return null;
-                    });
-
-                    JsonArray authors = article.getJsonArray("authors");
-                    if (authors != null) {
-                        for (int i = 0; i < authors.size(); i++) {
-                            JsonObject author = authors.getJsonObject(i);
-                            String rawId = author.getString("id", "");
-                            final String authorId = rawId.isEmpty() ? "unknown_" + articleId + "_" + i : rawId;
-                            final String authorName = author.getString("name", "");
-
-                            session.writeTransaction(tx -> {
-                                tx.run(
-                                        "MERGE (au:AUTHOR {_id: $authorId}) "
-                                        + "SET au.name = $name "
-                                        + "WITH au "
-                                        + "MATCH (a:ARTICLE {_id: $articleId}) "
-                                        + "MERGE (au)-[:AUTHORED]->(a)",
-                                        parameters("authorId", authorId, "name", authorName, "articleId", articleId)
-                                );
-                                return null;
-                            });
-                        }
-                    }
-                    JsonArray references = article.getJsonArray("references");
-                    if (references != null) {
-                        for (int i = 0; i < references.size(); i++) {
-                            final String refId = ((JsonString) references.get(i)).getString();
-                            if (refId.isEmpty()) {
-                                continue;
-                            }
-
-                            session.writeTransaction(tx -> {
-                                tx.run(
-                                        "MERGE (ref:ARTICLE {_id: $refId}) "
-                                        + "WITH ref "
-                                        + "MATCH (a:ARTICLE {_id: $articleId}) "
-                                        + "MERGE (a)-[:CITE]->(ref)",
-                                        parameters("refId", refId, "articleId", articleId)
-                                );
-                                return null;
-                            });
-                        }
-                    }
+                if (batch.size() >= BATCH_SIZE) {
+                    sendBatch(driver, batch);
+                    batch.clear();
                 }
 
                 count++;
-                if (count % 100 == 0) {
-                    System.out.println("Imported " + count + " articles...");
+
+                if (count % 1000 == 0) {
+                    System.out.println("Imported " + count);
                 }
+            }
+
+            // dernier batch
+            if (!batch.isEmpty()) {
+                sendBatch(driver, batch);
             }
         }
 
         System.out.println("Import complete");
         driver.close();
+    }
+
+    private static void sendBatch(Driver driver, List<JsonObject> batch) {
+
+        try (Session session = driver.session()) {
+
+            session.writeTransaction(tx -> {
+
+                tx.run("""
+                            UNWIND $batch AS row
+
+                            MERGE (a:ARTICLE {_id: row.id})
+                            SET a.title = row.title
+
+                            WITH a, row
+
+                            UNWIND row.authors AS author
+                            MERGE (au:AUTHOR {_id: author.id})
+                            SET au.name = author.name
+                            MERGE (au)-[:AUTHORED]->(a)
+
+                            WITH a, row
+
+                            UNWIND row.references AS refId
+                            MERGE (ref:ARTICLE {_id: refId})
+                            MERGE (a)-[:CITE]->(ref)
+                        """, parameters("batch", batch));
+
+                return null;
+            });
+        }
     }
 }
