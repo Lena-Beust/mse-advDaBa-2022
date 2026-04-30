@@ -13,7 +13,9 @@ import static org.neo4j.driver.Values.parameters;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
 import jakarta.json.JsonReader;
 import jakarta.json.JsonString;
 
@@ -73,8 +75,8 @@ public class ImportDB {
                 try (JsonReader reader = Json.createReader(new StringReader(line))) {
                     article = reader.readObject();
                 }
-
-                batch.add(article);
+                JsonObject cleanarticle = clean(article);
+                batch.add(cleanarticle);
 
                 if (batch.size() >= BATCH_SIZE) {
                     sendBatch(driver, batch);
@@ -127,5 +129,74 @@ public class ImportDB {
                 return null;
             });
         }
+    }
+
+    private static JsonObject clean(JsonObject article) {
+        JsonObjectBuilder builder = Json.createObjectBuilder();
+
+        // --- ARTICLE ---
+        String articleId = article.getString("id", "");
+        builder.add("id", articleId);
+        builder.add("title", article.getString("title", ""));
+
+        // Nouvelles propriétés
+        builder.add("year", article.containsKey("year") ? article.getInt("year") : 0);
+        builder.add("venue", article.getString("venue", ""));
+        builder.add("doi", article.getString("doi", ""));
+        builder.add("n_citation", article.containsKey("n_citation") ? article.getInt("n_citation") : 0);
+
+        // --- AUTHORS ---
+        JsonArrayBuilder authorsArray = Json.createArrayBuilder();
+        JsonArray authors = article.getJsonArray("authors");
+
+        if (authors != null) {
+            for (int i = 0; i < authors.size(); ++i) {
+                JsonObject author = authors.getJsonObject(i);
+
+                String rawId = author.getString("id", "");
+                String name = author.getString("name", "").trim();
+
+                // 🔑 fallback ID basé sur hash du nom
+                String authorId;
+                if (rawId.isEmpty()) {
+                    authorId = name.isEmpty()
+                            ? "unknown_" + articleId + "_" + i
+                            : String.valueOf(name.toLowerCase().hashCode());
+                } else {
+                    authorId = rawId;
+                }
+
+                authorsArray.add(
+                        Json.createObjectBuilder()
+                                .add("id", authorId)
+                                .add("name", name));
+            }
+        }
+
+        builder.add("authors", authorsArray);
+
+        // --- REFERENCES ---
+        JsonArrayBuilder refArray = Json.createArrayBuilder();
+        JsonArray refs = article.getJsonArray("references");
+
+        if (refs != null) {
+            for (int i = 0; i < refs.size(); ++i) {
+                String refId = refs.getString(i, "");
+                if (!refId.isEmpty()) {
+                    refArray.add(refId);
+                }
+            }
+        }
+
+        builder.add("references", refArray);
+
+        // --- PLACEHOLDER FLAG ---
+        // 👉 Un article est "incomplet" s'il manque des infos importantes
+        boolean isPlaceholder = articleId.isEmpty() ||
+                article.getString("title", "").isEmpty();
+
+        builder.add("placeholder", isPlaceholder);
+
+        return builder.build();
     }
 }
