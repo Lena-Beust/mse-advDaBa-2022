@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: beu-cro-adv-daba-26
+  namespace: beu-cro-adv-daba-26
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: beu-cro-adv-daba-26
+          image: registry.forge.hefr.ch/lena.beust/adv-daba-26:latest
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: beu-cro-adv-daba-26-config
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      restartPolicy: Never 
+  backoffLimit: 3

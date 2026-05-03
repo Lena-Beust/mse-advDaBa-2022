@@ -14,26 +14,22 @@ spec:
         app: neo4j
     spec:
       containers:
-      - name: neo4j
-        image: neo4j:5
-        ports:
-          - containerPort: 7687
-          - containerPort: 7474
-        env:
-          - name: NEO4J_AUTH
-            value: neo4j/password
-          - name: NEO4J_dbms_memory_heap_initial__size
-            value: "2G"
-          - name: NEO4J_dbms_memory_heap_max__size
-            value: "2G"
-          - name: NEO4J_dbms_memory_pagecache_size
-            value: "4G"
-
+        - name: neo4j
+          image: neo4j:4.4.15-community
+          ports:
+            - containerPort: 7687
+            - containerPort: 7474
+          env:
+            - name: NEO4J_AUTH
+              value: "neo4j/test_neo4j"
+          resources:
+            limits:
+              memory: "3Gi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: neo4j-service
+  name: neo4j
   namespace: beu-cro-adv-daba-26
 spec:
   selector:

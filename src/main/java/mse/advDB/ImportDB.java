@@ -1,7 +1,6 @@
 package mse.advDB;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringReader;
 
@@ -17,10 +16,10 @@ import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ImportDB {
 
@@ -60,7 +59,14 @@ public class ImportDB {
             });
         }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(jsonPath))) {
+        java.io.InputStream inputStream;
+        if (jsonPath.startsWith("http://") || jsonPath.startsWith("https://")) {
+            inputStream = new java.net.URL(jsonPath).openStream();
+        } else {
+            inputStream = new java.io.FileInputStream(jsonPath);
+        }
+
+        try (BufferedReader br = new BufferedReader(new java.io.InputStreamReader(inputStream))) {
             String line;
             int count = 0;
             final int BATCH_SIZE = 1000;
@@ -75,8 +81,9 @@ public class ImportDB {
                 try (JsonReader reader = Json.createReader(new StringReader(line))) {
                     article = reader.readObject();
                 }
-                JsonObject cleanarticle = clean(article);
-                batch.add(cleanarticle);
+
+                JsonObject cleanArticle = clean(article);
+                batch.add(cleanArticle);
 
                 if (batch.size() >= BATCH_SIZE) {
                     sendBatch(driver, batch);
@@ -100,36 +107,73 @@ public class ImportDB {
         driver.close();
     }
 
-    private static void sendBatch(Driver driver, List<JsonObject> batch) {
+	private static void sendBatch(Driver driver, List<JsonObject> batch) {
+	    List<Map<String, Object>> rows = new ArrayList<>();
 
-        try (Session session = driver.session()) {
+	    for (JsonObject article : batch) {
+		Map<String, Object> row = new java.util.HashMap<>();
+		row.put("id", article.getString("id", ""));
+		row.put("title", article.getString("title", ""));
+		row.put("year", article.getInt("year", 0));
+		row.put("venue", article.getString("venue", ""));
+		row.put("doi", article.getString("doi", ""));
+		row.put("n_citation", article.getInt("n_citation", 0));
 
-            session.writeTransaction(tx -> {
+		// Authors
+		List<Map<String, Object>> authors = new ArrayList<>();
+		JsonArray authorsArray = article.getJsonArray("authors");
+		if (authorsArray != null) {
+		    for (int i = 0; i < authorsArray.size(); i++) {
+		        JsonObject a = authorsArray.getJsonObject(i);
+		        Map<String, Object> author = new java.util.HashMap<>();
+		        author.put("id", a.getString("id", ""));
+		        author.put("name", a.getString("name", ""));
+		        authors.add(author);
+		    }
+		}
+		row.put("authors", authors);
 
-                tx.run("""
-                            UNWIND $batch AS row
+		// References
+		List<String> refs = new ArrayList<>();
+		JsonArray refsArray = article.getJsonArray("references");
+		if (refsArray != null) {
+		    for (int i = 0; i < refsArray.size(); i++) {
+		        refs.add(refsArray.getString(i, ""));
+		    }
+		}
+		row.put("references", refs);
+		rows.add(row);
+	    }
 
-                            MERGE (a:ARTICLE {_id: row.id})
-                            SET a.title = row.title
+	    try (Session session = driver.session()) {
+		session.writeTransaction(tx -> {
+		    tx.run("""
+		            UNWIND $batch AS row
 
-                            WITH a, row
+		            MERGE (a:ARTICLE {_id: row.id})
+		            SET a.title = row.title,
+		                a.year = row.year,
+		                a.venue = row.venue,
+		                a.doi = row.doi,
+		                a.n_citation = row.n_citation
 
-                            UNWIND row.authors AS author
-                            MERGE (au:AUTHOR {_id: author.id})
-                            SET au.name = author.name
-                            MERGE (au)-[:AUTHORED]->(a)
+		            WITH a, row
 
-                            WITH a, row
+		            UNWIND row.authors AS author
+		            MERGE (au:AUTHOR {_id: author.id})
+		            SET au.name = author.name
+		            MERGE (au)-[:AUTHORED]->(a)
 
-                            UNWIND row.references AS refId
-                            MERGE (ref:ARTICLE {_id: refId})
-                            MERGE (a)-[:CITE]->(ref)
-                        """, parameters("batch", batch));
+		            WITH a, row
 
-                return null;
-            });
-        }
-    }
+		            UNWIND row.references AS refId
+		            MERGE (ref:ARTICLE {_id: refId})
+		            MERGE (a)-[:CITE]->(ref)
+		            """, parameters("batch", rows));
+		    return null;
+		});
+	    }
+	}
 
     private static JsonObject clean(JsonObject article) {
         JsonObjectBuilder builder = Json.createObjectBuilder();
@@ -138,8 +182,6 @@ public class ImportDB {
         String articleId = article.getString("id", "");
         builder.add("id", articleId);
         builder.add("title", article.getString("title", ""));
-
-        // Nouvelles propriétés
         builder.add("year", article.containsKey("year") ? article.getInt("year") : 0);
         builder.add("venue", article.getString("venue", ""));
         builder.add("doi", article.getString("doi", ""));
@@ -156,7 +198,6 @@ public class ImportDB {
                 String rawId = author.getString("id", "");
                 String name = author.getString("name", "").trim();
 
-                // 🔑 fallback ID basé sur hash du nom
                 String authorId;
                 if (rawId.isEmpty()) {
                     authorId = name.isEmpty()
@@ -191,10 +232,8 @@ public class ImportDB {
         builder.add("references", refArray);
 
         // --- PLACEHOLDER FLAG ---
-        // 👉 Un article est "incomplet" s'il manque des infos importantes
         boolean isPlaceholder = articleId.isEmpty() ||
                 article.getString("title", "").isEmpty();
-
         builder.add("placeholder", isPlaceholder);
 
         return builder.build();
