@@ -4,6 +4,8 @@ metadata:
   name: beu-cro-adv-daba-26
   namespace: beu-cro-adv-daba-26
 spec:
+  activeDeadlineSeconds: 86400  # 24 h
+  backoffLimit: 3
   template:
     spec:
       imagePullSecrets:
@@ -17,10 +19,9 @@ spec:
                 name: beu-cro-adv-daba-26-config
           resources:
             requests:
-              memory: "64Mi"
-              cpu: "50m"
+              memory: "3000Mi"
+              cpu: "2000m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
-      restartPolicy: Never 
-  backoffLimit: 3
+              memory: "3000Mi"
+              cpu: "2000m"
+      restartPolicy: Never

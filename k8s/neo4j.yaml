@@ -23,8 +23,12 @@ spec:
             - name: NEO4J_AUTH
               value: "neo4j/test_neo4j"
           resources:
+            requests:
+              memory: "3000Mi"
+              cpu: "2000m"
             limits:
-              memory: "3Gi"
+              memory: "3000Mi"
+              cpu: "2000m"
 ---
 apiVersion: v1
 kind: Service

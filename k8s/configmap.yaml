@@ -6,5 +6,5 @@ metadata:
 data:
   TZ: "Europe/Zurich"
   NEO4J_IP: "neo4j"
-  MAX_NODES: "1000" 
-  JSON_FILE: "/data/dblpExample.json"
+  MAX_NODES: "99999999"
+  JSON_FILE: "http://vmrum.isc.heia-fr.ch/files/DBLP-Citation-network-V18.jsonl"
