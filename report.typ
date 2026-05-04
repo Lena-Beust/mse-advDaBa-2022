@@ -30,8 +30,6 @@ This report explains the steps we followed for this second laboratory on Neo4J.
 
 
 = #text(fill: red)[Group informations]
-Here are the important informations about our group :
-- Groupe ID : *???????*
 - Namespace : *beu-cro-adv-daba-26*
 - ID of the pod containing Neo4j : *neo4j-7b94c6b485-7ln46*
 - Neo4j credentials :
@@ -44,9 +42,27 @@ Here are the important informations about our group :
 
 == Streaming the database
 The entire database was streamed directly from the following link : "http://vmrum.isc.heia-fr.ch/files/DBLP-Citation-network-V18.jsonl", by batches of size 1000 in order to manage its significant amount of data.
+To ensure that our streaming doesn't exceed the capacity of the environment at our disposal, we describe the following configuration in streamer.yaml :
+```java
+containers:
+	- name: streamer
+		image: registry.forge.hefr.ch/lena.beust/adv-daba-26:latest
+		env:
+		- name: JSON_FILE
+			value: "http://vmrum.isc.heia-fr.ch/files/DBLP-Citation-network-V18.jsonl"
+resources:
+	requests:
+		memory: "3000Mi"
+		cpu: "2000m"
+	limits:
+		memory: "3000Mi"
+		cpu: "2000m"
+
+```
 
 == Importing the database with java
-Firstly, we cleaned the articles extracted from the database because some authors were missing an id in the database. To solve this problem, we cerated an id which is either : - The hash of the name of the author in lowercase (if present).
+Firstly, we cleaned the articles extracted from the database because some authors were missing an id in the database. To solve this problem, we created an id which is either :
+- The hash of the name of the author in lowercase (if present).
 - unknown_\<articleID\>_i where i indicates that this author is the ith author of the article. If the name of the author is absent (which doesn't happen in the database).
 We also added the non-requested properties : year, venue, doi and n_citation in addition to the title which are set to "" by default if absent (except for year being set to 0 by default).
 Eventualy, we loaded the data base in neo4J, by the transaction : ```java
@@ -76,5 +92,25 @@ session.writeTransaction(tx -> {
 		            """, parameters("batch", rows));
 = #text(fill: red)[Loading time]
 ```
+
+We pass on the all database once to create the nodes and the link of authors, articles and cites.
+
 = #text(fill: red)[Loading time]
-The loading time can be retrieved in the maven logs of the streamer pod. We achieved a total running time of *?* hours to load *N?* articles and *K?* authors.
+The loading time can be retrieved in the maven logs of the streamer pod.
+We achieved a total running time of *18* hours and *40* minutes to load *6 730 119* articles, *4 894 225* authors and *7 370 598* cites.
+These values can be retrieved by  the following cypher commands :
+
+
+#image("assets/image.png")
+
+
+The number of imported author seems to be a bit high, probably due to the fact that every author without ID is linked to a new ID.
+One author can be linked to several IDs.
+Our process can be improve because it stops by an "unexpected EOF", implies an automatic restart of the streamer pods.
+After achieving 6 729 087 imported articles, we stopped the pod manually with :
+```bash
+kubectl scale deployment streamer --replicas=0 -n beu-cro-adv-daba-26
+
+```
+The data are still available in the pod neo4j.
+
